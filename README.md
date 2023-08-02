@@ -1,4 +1,7 @@
+# 效果
+![img.png](img.png)
 # 配置文件
+
 ```toml
 # bot token，从 BotFather 获取
 bot-token = "BotToken"
