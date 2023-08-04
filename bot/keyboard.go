@@ -8,6 +8,10 @@ func GetMainKeyboard() tgbotapi.ReplyKeyboardMarkup {
 		tgbotapi.NewKeyboardButton("查看帮助"),
 		tgbotapi.NewKeyboardButton("个人信息"),
 	))
+	buttons = append(buttons, tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("签到"),
+		//tgbotapi.NewKeyboardButton("更多功能"),
+	))
 	//buttons = append(buttons, tgbotapi.NewKeyboardButtonRow(
 	//))
 	return tgbotapi.NewReplyKeyboard(buttons...)

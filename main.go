@@ -22,6 +22,7 @@ func GetUser(chatId int64, username string, userId int64, tgBot tgbotapi.BotAPI)
 	}
 	if init {
 		message := tgbotapi.NewMessage(chatId, "初始化用户成功，获赠20积分")
+		message.ReplyMarkup = bot.GetMainKeyboard()
 		_, _ = tgBot.Send(message)
 	}
 	return user
@@ -63,6 +64,8 @@ func main() {
 				bot.Start(*update.Message, *tgBot)
 			} else if receiveMsg == "个人信息" {
 				bot.UserInfo(user, *update.Message, *tgBot)
+			} else if receiveMsg == "签到" {
+				bot.Sign(user, *update.Message, *tgBot)
 			} else if strings.HasPrefix(receiveMsg, "/") {
 				bot.RunCommand(user, strings.Split(receiveMsg[1:], " ")[0], *update.Message, *tgBot)
 			}

@@ -1,6 +1,10 @@
 package model
 
-import "log"
+import (
+	"log"
+	"neko-ai-bot/conf"
+	"time"
+)
 
 type User struct {
 	Id       int    `json:"id"`
@@ -8,9 +12,26 @@ type User struct {
 	UserId   int64  `json:"user_id"`
 	ChatId   int64  `json:"chat_id"`
 	Balance  int    `json:"balance"`
+	SignDate string `json:"sign_date"`
 }
 
 var users = make(map[int64]*User)
+
+func Sign(user *User) (bool, error) {
+	if user.SignDate == time.Now().Format("2006-01-02") {
+		return false, nil
+	} else {
+		user.SignDate = time.Now().Format("2006-01-02")
+		user.Balance += conf.Conf.SignGiftBalance
+		err := DB.Save(user).Error
+		if err == nil {
+			users[user.ChatId] = user
+			return true, nil
+		} else {
+			return false, err
+		}
+	}
+}
 
 func GetUserOrInit(chatId int64, username string, userId int64) (*User, error, bool) {
 	user, _ := GetUserByChatId(chatId)
@@ -55,8 +76,17 @@ func GetUserByChatId(chatId int64) (*User, error) {
 	return user, err
 }
 
-func UpdateUserBalance(user *User, balance int) error {
-	user.Balance = balance
+func DecreaseBalance(user *User, balance int) error {
+	user.Balance -= balance
+	err := DB.Save(user).Error
+	if err == nil {
+		users[user.ChatId] = user
+	}
+	return err
+}
+
+func IncreaseBalance(user *User, balance int) error {
+	user.Balance += balance
 	err := DB.Save(user).Error
 	if err == nil {
 		users[user.ChatId] = user

@@ -36,6 +36,21 @@ func test(message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
 	}
 }
 
+func Sign(user *model.User, message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
+	result, err := model.Sign(user)
+	if err != nil {
+		msg := tgbotapi.NewMessage(message.Chat.ID, "签到失败，数据库错误")
+		_, _ = tgBog.Send(msg)
+	}
+	if result {
+		msg := tgbotapi.NewMessage(message.Chat.ID, fmt.Sprintf("签到成功，获得%d积分", conf.Conf.SignGiftBalance))
+		_, _ = tgBog.Send(msg)
+	} else {
+		msg := tgbotapi.NewMessage(message.Chat.ID, "今日已签到")
+		_, _ = tgBog.Send(msg)
+	}
+}
+
 func UserInfo(user *model.User, message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
 	msg := tgbotapi.NewMessage(message.Chat.ID, "您的用户名为："+user.Username+"\n您的TgID为："+strconv.FormatInt(user.UserId, 10)+"\n您的积分为："+strconv.Itoa(user.Balance))
 	_, err := tgBog.Send(msg)
@@ -60,7 +75,7 @@ func Change(user *model.User, message tgbotapi.Message, tgBog tgbotapi.BotAPI, i
 		return
 	}
 	go func() {
-		err = model.UpdateUserBalance(user, conf.Conf.ImaginePrice)
+		err = model.DecreaseBalance(user, conf.Conf.ImaginePrice)
 		if err != nil {
 			log.Println(err)
 			msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, "绘图失败，原因：积分扣除失败")
@@ -85,8 +100,9 @@ func Change(user *model.User, message tgbotapi.Message, tgBog tgbotapi.BotAPI, i
 			}
 			midjourneyResponse := result.Data.(api.Midjourney)
 			if midjourneyResponse.FailReason != "" {
-				msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, "绘图失败，原因："+midjourneyResponse.FailReason)
+				msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, "绘图失败（不消耗积分），原因："+midjourneyResponse.FailReason)
 				_, _ = tgBog.Send(msg)
+				_ = model.IncreaseBalance(user, conf.Conf.ImaginePrice)
 				return
 			}
 			log.Printf("midjourneyResponse: %+v", midjourneyResponse)
@@ -139,19 +155,19 @@ func Change(user *model.User, message tgbotapi.Message, tgBog tgbotapi.BotAPI, i
 }
 
 func Imagine(user *model.User, message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
-	if user.Balance < conf.Conf.ImaginePrice {
-		msg := tgbotapi.NewMessage(message.Chat.ID, fmt.Sprintf("您的积分不足，当前积分：%d，绘图所需积分：%d", user.Balance, conf.Conf.ImaginePrice))
+
+	prompt := strings.TrimPrefix(message.Text, "/imagine")
+	prompt = strings.TrimSpace(prompt)
+	if prompt == "" {
+		msg := tgbotapi.NewMessage(message.Chat.ID, "请输入绘图内容，例如：\n/imagine 可爱猫猫")
 		_, err := tgBog.Send(msg)
 		if err != nil {
 			log.Println(err)
 		}
 		return
 	}
-
-	prompt := strings.TrimPrefix(message.Text, "/imagine")
-	prompt = strings.TrimSpace(prompt)
-	if prompt == "" {
-		msg := tgbotapi.NewMessage(message.Chat.ID, "请输入绘图内容，例如：\n/imagine 可爱猫猫")
+	if user.Balance < conf.Conf.ImaginePrice {
+		msg := tgbotapi.NewMessage(message.Chat.ID, fmt.Sprintf("您的积分不足，当前积分：%d，绘图所需积分：%d", user.Balance, conf.Conf.ImaginePrice))
 		_, err := tgBog.Send(msg)
 		if err != nil {
 			log.Println(err)
@@ -166,7 +182,7 @@ func Imagine(user *model.User, message tgbotapi.Message, tgBog tgbotapi.BotAPI) 
 		return
 	}
 	go func() {
-		err = model.UpdateUserBalance(user, conf.Conf.ImaginePrice)
+		err = model.DecreaseBalance(user, conf.Conf.ImaginePrice)
 		if err != nil {
 			log.Println(err)
 			msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, "绘图失败，原因：积分扣除失败")
@@ -191,7 +207,8 @@ func Imagine(user *model.User, message tgbotapi.Message, tgBog tgbotapi.BotAPI) 
 			}
 			midjourneyResponse := result.Data.(api.Midjourney)
 			if midjourneyResponse.FailReason != "" {
-				msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, "绘图失败，原因："+midjourneyResponse.FailReason)
+				msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, "绘图失败（不消耗积分），原因："+midjourneyResponse.FailReason)
+				_ = model.IncreaseBalance(user, conf.Conf.ImaginePrice)
 				_, _ = tgBog.Send(msg)
 				return
 			}
@@ -245,7 +262,7 @@ func Imagine(user *model.User, message tgbotapi.Message, tgBog tgbotapi.BotAPI) 
 }
 
 func Start(message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
-	msg := tgbotapi.NewMessage(message.Chat.ID, "输入绘图内容，例如：\n/imagine 可爱猫猫\n每次绘图或者变换都会消耗10积分，积分可以通过每日签到获取")
+	msg := tgbotapi.NewMessage(message.Chat.ID, "输入绘图内容\n例如: /imagine 可爱猫猫\n二次元风格可以加上参数\n例如: /imagine 猫娘 --niji 5\n每次绘图或者变换都会消耗10积分，积分可以通过每日签到获取")
 	msg.ReplyMarkup = GetMainKeyboard()
 	_, err := tgBog.Send(msg)
 	if err != nil {

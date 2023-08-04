@@ -4,8 +4,8 @@ admin-username = ["YourUserName"]
 
 api-key = "sk-xxx"
 
-new-user-balance = 20
+new-user-balance = 50
 
-sign-gift-balance = 30
+sign-gift-balance = 10
 
 imagine-price = 10
