@@ -1,23 +1,27 @@
 package bot
 
 import (
+	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"io"
 	"log"
 	"neko-ai-bot/api"
+	"neko-ai-bot/conf"
+	"neko-ai-bot/model"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
 
-func RunCommand(cmdText string, message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
+func RunCommand(user *model.User, cmdText string, message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
 	log.Println("run command: ", cmdText)
 
 	switch cmdText {
 	case "start":
 		Start(message, tgBog)
 	case "imagine":
-		Imagine(message, tgBog)
+		Imagine(user, message, tgBog)
 	case "test":
 		test(message, tgBog)
 	}
@@ -32,7 +36,23 @@ func test(message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
 	}
 }
 
-func Change(message tgbotapi.Message, tgBog tgbotapi.BotAPI, index int, taskId string, action string) {
+func UserInfo(user *model.User, message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
+	msg := tgbotapi.NewMessage(message.Chat.ID, "您的用户名为："+user.Username+"\n您的TgID为："+strconv.FormatInt(user.UserId, 10)+"\n您的积分为："+strconv.Itoa(user.Balance))
+	_, err := tgBog.Send(msg)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func Change(user *model.User, message tgbotapi.Message, tgBog tgbotapi.BotAPI, index int, taskId string, action string) {
+	if user.Balance < conf.Conf.ImaginePrice {
+		msg := tgbotapi.NewMessage(message.Chat.ID, fmt.Sprintf("您的积分不足，当前积分：%d，绘图所需积分：%d", user.Balance, conf.Conf.ImaginePrice))
+		_, err := tgBog.Send(msg)
+		if err != nil {
+			log.Println(err)
+		}
+		return
+	}
 	msg := tgbotapi.NewMessage(message.Chat.ID, "请稍等，正在发送绘图请求")
 	processMsg, err := tgBog.Send(msg)
 	if err != nil {
@@ -40,9 +60,16 @@ func Change(message tgbotapi.Message, tgBog tgbotapi.BotAPI, index int, taskId s
 		return
 	}
 	go func() {
+		err = model.UpdateUserBalance(user, conf.Conf.ImaginePrice)
+		if err != nil {
+			log.Println(err)
+			msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, "绘图失败，原因：积分扣除失败")
+			_, _ = tgBog.Send(msg)
+			return
+		}
 		result := api.Change(taskId, action, index)
 		if result.Code == 1 || result.Code == 22 {
-			msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, "正在绘图中，当前进度： 排队中")
+			msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, fmt.Sprintf("花费%d积分正在绘图中，当前进度： 排队中", conf.Conf.ImaginePrice))
 			_, _ = tgBog.Send(msg)
 		} else {
 			msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, "绘图失败，原因："+result.Description)
@@ -83,7 +110,7 @@ func Change(message tgbotapi.Message, tgBog tgbotapi.BotAPI, index int, taskId s
 					return
 				}
 				defer func() {
-					msg = tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, "绘图已完成")
+					msg = tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, fmt.Sprintf("绘图完成，花费%d积分", conf.Conf.ImaginePrice))
 					_, _ = tgBog.Send(msg)
 				}()
 				defer resp.Body.Close()
@@ -111,7 +138,16 @@ func Change(message tgbotapi.Message, tgBog tgbotapi.BotAPI, index int, taskId s
 	}()
 }
 
-func Imagine(message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
+func Imagine(user *model.User, message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
+	if user.Balance < conf.Conf.ImaginePrice {
+		msg := tgbotapi.NewMessage(message.Chat.ID, fmt.Sprintf("您的积分不足，当前积分：%d，绘图所需积分：%d", user.Balance, conf.Conf.ImaginePrice))
+		_, err := tgBog.Send(msg)
+		if err != nil {
+			log.Println(err)
+		}
+		return
+	}
+
 	prompt := strings.TrimPrefix(message.Text, "/imagine")
 	prompt = strings.TrimSpace(prompt)
 	if prompt == "" {
@@ -130,9 +166,16 @@ func Imagine(message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
 		return
 	}
 	go func() {
+		err = model.UpdateUserBalance(user, conf.Conf.ImaginePrice)
+		if err != nil {
+			log.Println(err)
+			msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, "绘图失败，原因：积分扣除失败")
+			_, _ = tgBog.Send(msg)
+			return
+		}
 		result := api.Imagine("", prompt)
 		if result.Code == 1 || result.Code == 22 {
-			msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, "正在绘图中，当前进度： 排队中")
+			msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, fmt.Sprintf("花费%d积分，正在绘图中，当前进度： 排队中", conf.Conf.ImaginePrice))
 			_, _ = tgBog.Send(msg)
 		} else {
 			msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, "绘图失败，原因："+result.Description)
@@ -173,7 +216,7 @@ func Imagine(message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
 					return
 				}
 				defer func() {
-					msg = tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, "绘图已完成")
+					msg = tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, fmt.Sprintf("绘图完成，花费%d积分", conf.Conf.ImaginePrice))
 					_, _ = tgBog.Send(msg)
 				}()
 				defer resp.Body.Close()
@@ -202,7 +245,8 @@ func Imagine(message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
 }
 
 func Start(message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
-	msg := tgbotapi.NewMessage(message.Chat.ID, "输入绘图内容，例如：\n/imagine 可爱猫猫")
+	msg := tgbotapi.NewMessage(message.Chat.ID, "输入绘图内容，例如：\n/imagine 可爱猫猫\n每次绘图或者变换都会消耗10积分，积分可以通过每日签到获取")
+	msg.ReplyMarkup = GetMainKeyboard()
 	_, err := tgBog.Send(msg)
 	if err != nil {
 		log.Println(err)

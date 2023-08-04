@@ -6,9 +6,12 @@ import (
 )
 
 type ConfigStruct struct {
-	BotToken      string   `toml:"bot-token"`
-	AdminUsername []string `toml:"admin-username"`
-	ApiKey        string   `toml:"api-key"`
+	BotToken        string   `toml:"bot-token"`
+	AdminUsername   []string `toml:"admin-username"`
+	ApiKey          string   `toml:"api-key"`
+	NewUserBalance  int      `toml:"new-user-balance"`
+	SignGiftBalance int      `toml:"sign-gift-balance"`
+	ImaginePrice    int      `toml:"imagine-price"`
 }
 
 var Conf ConfigStruct

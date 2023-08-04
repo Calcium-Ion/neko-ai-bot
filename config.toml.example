@@ -3,3 +3,9 @@ bot-token = "your bot token"
 admin-username = ["YourUserName"]
 
 api-key = "sk-xxx"
+
+new-user-balance = 20
+
+sign-gift-balance = 30
+
+imagine-price = 10

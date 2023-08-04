@@ -2,6 +2,17 @@ package bot
 
 import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
+func GetMainKeyboard() tgbotapi.ReplyKeyboardMarkup {
+	buttons := make([][]tgbotapi.KeyboardButton, 0)
+	buttons = append(buttons, tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("查看帮助"),
+		tgbotapi.NewKeyboardButton("个人信息"),
+	))
+	//buttons = append(buttons, tgbotapi.NewKeyboardButtonRow(
+	//))
+	return tgbotapi.NewReplyKeyboard(buttons...)
+}
+
 func GetChangeKeyboard(taskId string, url string, action string) tgbotapi.InlineKeyboardMarkup {
 	buttons := make([][]tgbotapi.InlineKeyboardButton, 0)
 
