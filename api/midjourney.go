@@ -38,7 +38,7 @@ func Fetch(taskId string) *Result {
 		"Content-Type":  "application/json",
 		"Authorization": conf.Conf.ApiKey,
 	}
-	url := fmt.Sprintf("https://api.nekoedu.com/mj/task/%s/fetch", taskId)
+	url := fmt.Sprintf("https://nekoapi.com/mj/task/%s/fetch", taskId)
 	//log.Println(url)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -89,7 +89,7 @@ func Change(taskId string, action string, index int) *Result {
 		return ErrorUtil("json marshal error")
 	}
 
-	req, err := http.NewRequest("POST", "https://api.nekoedu.com/mj/submit/change", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", "https://nekoapi.com/mj/submit/change", bytes.NewBuffer(jsonData))
 	for key, value := range header {
 		req.Header.Set(key, value)
 	}
@@ -120,7 +120,7 @@ func Change(taskId string, action string, index int) *Result {
 }
 
 func Imagine(base64 string, prompt string) *Result {
-	//url https://api.nekoedu.com/mj/submit/imagine
+	//url https://nekoapi.com/mj/submit/imagine
 	//method POST
 	header := map[string]string{
 		"Content-Type":  "application/json",
@@ -141,7 +141,7 @@ func Imagine(base64 string, prompt string) *Result {
 		return ErrorUtil("json marshal error")
 	}
 
-	req, err := http.NewRequest("POST", "https://api.nekoedu.com/mj/submit/imagine", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", "https://nekoapi.com/mj/submit/imagine", bytes.NewBuffer(jsonData))
 	for key, value := range header {
 		req.Header.Set(key, value)
 	}

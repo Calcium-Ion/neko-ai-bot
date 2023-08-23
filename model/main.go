@@ -20,6 +20,10 @@ func Setup() {
 		if err != nil {
 			panic(err)
 		}
+		err = db.AutoMigrate(&Unlimited{})
+		if err != nil {
+			panic(err)
+		}
 		log.Println("database migrated")
 	} else {
 		log.Println(err)

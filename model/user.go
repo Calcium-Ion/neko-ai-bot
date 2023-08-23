@@ -7,12 +7,14 @@ import (
 )
 
 type User struct {
-	Id       int    `json:"id"`
-	Username string `json:"username"`
-	UserId   int64  `json:"user_id"`
-	ChatId   int64  `json:"chat_id"`
-	Balance  int    `json:"balance"`
-	SignDate string `json:"sign_date"`
+	Id          int    `json:"id"`
+	Username    string `json:"username"`
+	UserId      int64  `json:"user_id"`
+	ChatId      int64  `json:"chat_id"`
+	Balance     int    `json:"balance"`
+	SignDate    string `json:"sign_date"`
+	Key         string `json:"key"`
+	AccessToken string `json:"access_token"`
 }
 
 var users = make(map[int64]*User)

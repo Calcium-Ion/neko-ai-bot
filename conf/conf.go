@@ -12,6 +12,7 @@ type ConfigStruct struct {
 	NewUserBalance  int      `toml:"new-user-balance"`
 	SignGiftBalance int      `toml:"sign-gift-balance"`
 	ImaginePrice    int      `toml:"imagine-price"`
+	AccessToken     string   `toml:"access-token"`
 }
 
 var Conf ConfigStruct

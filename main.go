@@ -1,13 +1,16 @@
 package main
 
 import (
+	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"neko-ai-bot/bot"
 	"neko-ai-bot/conf"
 	"neko-ai-bot/model"
+	"neko-ai-bot/util"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func GetUser(chatId int64, username string, userId int64, tgBot tgbotapi.BotAPI) *model.User {
@@ -22,20 +25,62 @@ func GetUser(chatId int64, username string, userId int64, tgBot tgbotapi.BotAPI)
 	}
 	if init {
 		message := tgbotapi.NewMessage(chatId, "初始化用户成功，获赠20积分")
-		message.ReplyMarkup = bot.GetMainKeyboard()
+		message.ReplyMarkup = bot.GetMainKeyboard(chatId)
 		_, _ = tgBot.Send(message)
 	}
 	return user
 }
 
+func CheckStatus(tgBog tgbotapi.BotAPI) {
+	go func() {
+		for {
+			time.Sleep(5 * time.Minute)
+			now := time.Now()
+			currentUnixTimestamp := now.Unix()
+			respBody, err := util.DoRequest(fmt.Sprintf("/api/log/stat?&type=0&token_name=&model_name=&start_timestamp=%d&end_timestamp=%d", currentUnixTimestamp-60, currentUnixTimestamp))
+			if respBody["success"].(bool) {
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				if int(respBody["data"].(map[string]interface{})["rpm"].(float64)) > 800 {
+					msgS := "NekoAPI高负载警告\n"
+					if conf.Conf.AccessToken != "" {
+						msg := tgbotapi.NewMessage(6134547155, msgS)
+						processMsg, err := tgBog.Send(msg)
+						if err != nil {
+							log.Println(err)
+						}
+						if err != nil {
+							log.Println(err)
+							msgS += "今日RPM：获取失败\n"
+						} else {
+							if respBody["success"].(bool) {
+								log.Println(respBody)
+								msgS += fmt.Sprintf("上一分钟RPM：%d\n", int(respBody["data"].(map[string]interface{})["rpm"].(float64)))
+								msgS += fmt.Sprintf("上一分钟TPM：%d\n", int(respBody["data"].(map[string]interface{})["tpm"].(float64)))
+							}
+							msg := tgbotapi.NewEditMessageText(6134547155, processMsg.MessageID, msgS)
+							_, _ = tgBog.Send(msg)
+						}
+					}
+				}
+			}
+		}
+	}()
+}
+
 func main() {
 	conf.Setup()
 	model.Setup()
+
 	tgBot, err := tgbotapi.NewBotAPI(conf.Conf.BotToken)
 	if err != nil {
 		log.Panic(err)
 	}
 	tgBot.Debug = true
+
+	CheckStatus(*tgBot)
 
 	log.Printf("Authorized on account %s", tgBot.Self.UserName)
 
@@ -62,9 +107,9 @@ func main() {
 
 			if receiveMsg == "查看帮助" {
 				bot.Start(*update.Message, *tgBot)
-			} else if receiveMsg == "个人信息" {
+			} else if receiveMsg == "个人信息" || receiveMsg == "/me" {
 				bot.UserInfo(user, *update.Message, *tgBot)
-			} else if receiveMsg == "签到" {
+			} else if receiveMsg == "签到" || receiveMsg == "/sign" {
 				bot.Sign(user, *update.Message, *tgBot)
 			} else if strings.HasPrefix(receiveMsg, "/") {
 				bot.RunCommand(user, strings.Split(receiveMsg[1:], " ")[0], *update.Message, *tgBot)

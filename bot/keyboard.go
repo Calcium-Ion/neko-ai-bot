@@ -2,7 +2,10 @@ package bot
 
 import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-func GetMainKeyboard() tgbotapi.ReplyKeyboardMarkup {
+func GetMainKeyboard(chatId int64) tgbotapi.ReplyKeyboardMarkup {
+	if chatId < 0 {
+		return tgbotapi.NewReplyKeyboard()
+	}
 	buttons := make([][]tgbotapi.KeyboardButton, 0)
 	buttons = append(buttons, tgbotapi.NewKeyboardButtonRow(
 		tgbotapi.NewKeyboardButton("查看帮助"),
