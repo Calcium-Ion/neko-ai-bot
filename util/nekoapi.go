@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"neko-ai-bot/conf"
 	"net/http"
 )
 
-func DoRequest(path string) (map[string]interface{}, error) {
-	uri := fmt.Sprintf("https://nekoapi.com" + path)
+func DoRequest(baseUrl string, path string, token string) (map[string]interface{}, error) {
+	uri := fmt.Sprintf(baseUrl + path)
 	client := &http.Client{}
 	// 创建请求
 	req, err := http.NewRequest("GET", uri, nil)
@@ -20,7 +19,7 @@ func DoRequest(path string) (map[string]interface{}, error) {
 	}
 
 	// 添加请求头
-	req.Header.Add("Authorization", "Bearer "+conf.Conf.AccessToken)
+	req.Header.Add("Authorization", "Bearer "+token)
 
 	log.Println(req.Header)
 

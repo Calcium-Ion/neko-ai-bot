@@ -4,9 +4,6 @@ bot-token = "your bot token"
 # admin 用户名，用于管理
 admin-username = ["YourUserName"]
 
-# 调用 key， 从 https://nekoapi.com/ 获取
-api-key = "sk-xxx"
-
 # 新用户注册赠送积分
 new-user-balance = 50
 
@@ -16,5 +13,9 @@ sign-gift-balance = 10
 # 绘图所需积分
 imagine-price = 10
 
-# 您的系统访问令牌
-access-token = ""
+# 您的系统访问令牌 格式为 "网站地址" = "访问令牌"，第一个站点为默认站点
+[sites]
+"https://nekoapi.com" = "xxxxxx"
+
+# 默认站点的调用 key
+api-key = "sk-xxx"

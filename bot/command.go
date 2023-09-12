@@ -27,7 +27,7 @@ func RunCommand(user *model.User, cmdText string, message tgbotapi.Message, tgBo
 	case "test":
 		test(message, tgBog)
 	case "status":
-		Status(message, tgBog)
+		ShowStatus(message, tgBog)
 	case "unlimited":
 		Unlimited(user, message, tgBog)
 	}
@@ -149,9 +149,22 @@ func Sign(user *model.User, message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
 	}
 }
 
-func Status(message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
-	msgS := "NekoAPI运行状态\n"
-	if conf.Conf.AccessToken != "" {
+func ShowStatus(message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
+	msgS := "请选择您要查看的站点\n"
+	msg := tgbotapi.NewMessage(message.Chat.ID, msgS)
+	msg.ReplyMarkup = GetStatusKeyboard()
+	_, _ = tgBog.Send(msg)
+}
+
+func Status(message tgbotapi.Message, tgBog tgbotapi.BotAPI, baseUrl string) {
+	msgS := baseUrl + " 运行状态\n"
+	//msg := tgbotapi.NewMessage(message.Chat.ID, msgS)
+	//processMsg, err := tgBog.Send(msg)
+	//if err != nil {
+	//	log.Println(err)
+	//}
+	if conf.Conf.Sites[baseUrl] != "" {
+		accessToken := conf.Conf.Sites[baseUrl]
 		now := time.Now()
 		currentUnixTimestamp := now.Unix()
 		startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -159,12 +172,8 @@ func Status(message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
 		startOfDayUnixTimestamp := startOfDay.Unix()
 		//uri := fmt.Sprintf("https://nekoapi.com/api/log/stat?&type=0&token_name=&model_name=&start_timestamp=%d&end_timestamp=%d", startOfDayUnixTimestamp, currentUnixTimestamp)
 		// resp body {"data":{"quota":0},"message":"","success":true}
-		msg := tgbotapi.NewMessage(message.Chat.ID, msgS)
-		processMsg, err := tgBog.Send(msg)
-		if err != nil {
-			log.Println(err)
-		}
-		respBody, err := util.DoRequest(fmt.Sprintf("/api/log/stat?&type=0&token_name=&model_name=&start_timestamp=%d&end_timestamp=%d", startOfDayUnixTimestamp, currentUnixTimestamp))
+
+		respBody, err := util.DoRequest(baseUrl, fmt.Sprintf("/api/log/stat?&type=0&token_name=&model_name=&start_timestamp=%d&end_timestamp=%d", startOfDayUnixTimestamp, currentUnixTimestamp), accessToken)
 		if err != nil {
 			log.Println(err)
 			msgS += "今日消耗：获取失败\n"
@@ -173,10 +182,10 @@ func Status(message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
 				log.Println(respBody)
 				msgS += fmt.Sprintf("今日消耗：＄%f\n", respBody["data"].(map[string]interface{})["quota"].(float64)/500000)
 			}
-			msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, msgS)
+			msg := tgbotapi.NewEditMessageText(message.Chat.ID, message.MessageID, msgS)
 			_, _ = tgBog.Send(msg)
 		}
-		respBody, err = util.DoRequest(fmt.Sprintf("/api/log/stat?&type=0&token_name=&model_name=&start_timestamp=%d&end_timestamp=%d", currentUnixTimestamp-60, currentUnixTimestamp))
+		respBody, err = util.DoRequest(baseUrl, fmt.Sprintf("/api/log/stat?&type=0&token_name=&model_name=&start_timestamp=%d&end_timestamp=%d", currentUnixTimestamp-60, currentUnixTimestamp), accessToken)
 		if err != nil {
 			log.Println(err)
 			msgS += "今日RPM：获取失败\n"
@@ -186,7 +195,7 @@ func Status(message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
 				msgS += fmt.Sprintf("上一分钟RPM：%d\n", int(respBody["data"].(map[string]interface{})["rpm"].(float64)))
 				msgS += fmt.Sprintf("上一分钟TPM：%d\n", int(respBody["data"].(map[string]interface{})["tpm"].(float64)))
 			}
-			msg := tgbotapi.NewEditMessageText(message.Chat.ID, processMsg.MessageID, msgS)
+			msg := tgbotapi.NewEditMessageText(message.Chat.ID, message.MessageID, msgS)
 			_, _ = tgBog.Send(msg)
 		}
 	}
@@ -211,7 +220,7 @@ func UserInfo(user *model.User, message tgbotapi.Message, tgBog tgbotapi.BotAPI)
 		}
 
 		// 添加请求头
-		req.Header.Add("Authorization", "Bearer "+conf.Conf.AccessToken)
+		req.Header.Add("Authorization", "Bearer "+conf.Conf.Sites["https://nekoapi.com"])
 
 		log.Println(req.Header)
 

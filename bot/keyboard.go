@@ -1,6 +1,9 @@
 package bot
 
-import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+import (
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"neko-ai-bot/conf"
+)
 
 func GetMainKeyboard(chatId int64) tgbotapi.ReplyKeyboardMarkup {
 	if chatId < 0 {
@@ -18,6 +21,20 @@ func GetMainKeyboard(chatId int64) tgbotapi.ReplyKeyboardMarkup {
 	//buttons = append(buttons, tgbotapi.NewKeyboardButtonRow(
 	//))
 	return tgbotapi.NewReplyKeyboard(buttons...)
+}
+
+func GetStatusKeyboard() tgbotapi.InlineKeyboardMarkup {
+	buttons := make([][]tgbotapi.InlineKeyboardButton, 0)
+
+	for baseUrl := range conf.Conf.Sites {
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(baseUrl, "/status "+baseUrl),
+		))
+	}
+
+	return tgbotapi.NewInlineKeyboardMarkup(
+		buttons...,
+	)
 }
 
 func GetChangeKeyboard(taskId string, url string, action string) tgbotapi.InlineKeyboardMarkup {
