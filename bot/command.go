@@ -11,7 +11,6 @@ import (
 	"neko-ai-bot/model"
 	"neko-ai-bot/util"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -28,8 +27,6 @@ func RunCommand(user *model.User, cmdText string, message tgbotapi.Message, tgBo
 		test(message, tgBog)
 	case "status":
 		ShowStatus(message, tgBog)
-	case "unlimited":
-		Unlimited(user, message, tgBog)
 	}
 }
 
@@ -48,89 +45,6 @@ func test(message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
 	_, err := tgBog.Send(msg)
 	if err != nil {
 		log.Println(err)
-	}
-}
-
-func Unlimited(user *model.User, message tgbotapi.Message, tgBog tgbotapi.BotAPI) {
-	args := strings.Split(message.Text, " ")
-	if len(args) < 2 {
-		//查询自己
-		unlimited, err := model.GetUnlimitedByIDOrUsername(user.Id, &user.Username)
-		if err != nil {
-			msg := tgbotapi.NewMessage(message.Chat.ID, "数据库错误")
-			_, _ = tgBog.Send(msg)
-			return
-		}
-		if unlimited == nil {
-			msg := tgbotapi.NewMessage(message.Chat.ID, "未开通包天套餐，请联系管理员")
-			_, _ = tgBog.Send(msg)
-			return
-		}
-		msg := tgbotapi.NewMessage(message.Chat.ID, fmt.Sprintf("包天GPT套餐\nKey: %s\nTPM限制: %d\nRPM限制: %d", unlimited.Key, unlimited.TokenLimit, unlimited.RateLimit))
-		_, _ = tgBog.Send(msg)
-		return
-	}
-	if !IsAdmin(user) {
-		msg := tgbotapi.NewMessage(message.Chat.ID, "无权限")
-		_, _ = tgBog.Send(msg)
-		return
-	}
-	cmd := args[1]
-	if cmd == "list" {
-
-		unlimited, err := model.GetAllUnlimited()
-		if err != nil {
-			msg := tgbotapi.NewMessage(message.Chat.ID, "数据库错误")
-			_, _ = tgBog.Send(msg)
-			return
-		}
-		var text string
-		for _, user := range unlimited {
-			text += fmt.Sprintf("%s %s %d %d\n", user.Username, user.Key, user.TokenLimit, user.RateLimit)
-		}
-		msg := tgbotapi.NewMessage(message.Chat.ID, text)
-		_, _ = tgBog.Send(msg)
-	} else {
-		if len(args) < 3 {
-			msg := tgbotapi.NewMessage(message.Chat.ID, "参数错误: /unlimited add username [tokenLimit] [rateLimit]")
-			_, _ = tgBog.Send(msg)
-			return
-		}
-		username := args[2]
-		if cmd == "add" {
-			user, err := model.GetUnlimitedByUsername(username)
-			if err != nil {
-				msg := tgbotapi.NewMessage(message.Chat.ID, "数据库错误")
-				_, _ = tgBog.Send(msg)
-				return
-			}
-			if user != nil {
-				msg := tgbotapi.NewMessage(message.Chat.ID, "用户已存在")
-				_, _ = tgBog.Send(msg)
-				return
-			}
-			tokenLimit := 10000
-			rateLimit := 500
-			if len(args) > 3 {
-				tokenLimit, _ = strconv.Atoi(args[3])
-				rateLimit, _ = strconv.Atoi(args[4])
-			}
-			user = &model.Unlimited{
-				Username:   username,
-				UserID:     0,
-				Key:        "sk-" + util.RandomString(48),
-				TokenLimit: tokenLimit,
-				RateLimit:  rateLimit,
-			}
-			err = user.Insert()
-			if err != nil {
-				msg := tgbotapi.NewMessage(message.Chat.ID, "数据库错误")
-				_, _ = tgBog.Send(msg)
-				return
-			}
-			msg := tgbotapi.NewMessage(message.Chat.ID, "添加成功")
-			_, _ = tgBog.Send(msg)
-		}
 	}
 }
 
